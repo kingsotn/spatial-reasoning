@@ -45,39 +45,45 @@ class DemoRunner:
         self._sim_settings = sim_settings.copy()
 
     def save_color_observation(self, obs, total_frames):
+        if not os.path.exists("observation/color"):
+            os.mkdir("observation/color")
         color_obs = obs["color_sensor"]
         color_img = Image.fromarray(color_obs, mode="RGBA")
         if self._demo_type == DemoRunnerType.AB_TEST:
             if self._group_id == ABTestGroup.CONTROL:
-                color_img.save("test.rgba.control.%05d.png" % total_frames)
+                color_img.save("observation/color/test.rgba.control.%05d.png" % total_frames)
             else:
-                color_img.save("test.rgba.test.%05d.png" % total_frames)
+                color_img.save("observation/color/test.rgba.test.%05d.png" % total_frames)
         else:
-            color_img.save("test.rgba.%05d.png" % total_frames)
+            color_img.save("observation/color/test.rgba.%05d.png" % total_frames)
 
     def save_semantic_observation(self, obs, total_frames):
+        if not os.path.exists("observation/semantic"):
+            os.mkdir("observation/semantic")
         semantic_obs = obs["semantic_sensor"]
         semantic_img = Image.new("P", (semantic_obs.shape[1], semantic_obs.shape[0]))
         semantic_img.putpalette(d3_40_colors_rgb.flatten())
         semantic_img.putdata((semantic_obs.flatten() % 40).astype(np.uint8))
         if self._demo_type == DemoRunnerType.AB_TEST:
             if self._group_id == ABTestGroup.CONTROL:
-                semantic_img.save("test.sem.control.%05d.png" % total_frames)
+                semantic_img.save("observation/semantic/obsertest.sem.control.%05d.png" % total_frames)
             else:
-                semantic_img.save("test.sem.test.%05d.png" % total_frames)
+                semantic_img.save("observation/semantic/test.sem.test.%05d.png" % total_frames)
         else:
-            semantic_img.save("test.sem.%05d.png" % total_frames)
+            semantic_img.save("observation/semantic/test.sem.%05d.png" % total_frames)
 
     def save_depth_observation(self, obs, total_frames):
+        if not os.path.exists("observation/depth"):
+            os.mkdir("observation/depth")
         depth_obs = obs["depth_sensor"]
         depth_img = Image.fromarray((depth_obs / 10 * 255).astype(np.uint8), mode="L")
         if self._demo_type == DemoRunnerType.AB_TEST:
             if self._group_id == ABTestGroup.CONTROL:
-                depth_img.save("test.depth.control.%05d.png" % total_frames)
+                depth_img.save("observation/depth/test.depth.control.%05d.png" % total_frames)
             else:
-                depth_img.save("test.depth.test.%05d.png" % total_frames)
+                depth_img.save("observation/depth/test.depth.test.%05d.png" % total_frames)
         else:
-            depth_img.save("test.depth.%05d.png" % total_frames)
+            depth_img.save("observation/depth/test.depth.%05d.png" % total_frames)
 
     def output_semantic_mask_stats(self, obs, total_frames):
         semantic_obs = obs["semantic_sensor"]
@@ -259,6 +265,8 @@ class DemoRunner:
             total_sim_step_time += self._sim._previous_step_time
 
             if self._sim_settings["save_png"]:
+                if not os.path.exists("observation"):
+                    os.mkdir("observation")
                 if self._sim_settings["color_sensor"]:
                     self.save_color_observation(observations, total_frames)
                 if self._sim_settings["depth_sensor"]:
