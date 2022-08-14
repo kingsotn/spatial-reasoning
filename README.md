@@ -2,7 +2,7 @@
 
 ## Generate Dataset
 
-### 1. Setting the environment
+### 1. Setting up the environment
 For faster installation, we want to use the computation node by running an interactivate job.
 ```
 srun -t30:00 -c4 --mem=3000 --pty /bin/bash
@@ -10,7 +10,7 @@ srun -t30:00 -c4 --mem=3000 --pty /bin/bash
 Create a directory for the environment.
 ```
 mkdir /scratch/$USER/environments
-cd /scratch/<NetID>/environments
+cd /scratch/$USER/environments
 ```
 Copy the overlay images to the directory and unzip it (here we use the image that has 15GB spaces and can hold 500k files). Then rename the image
 ```
@@ -78,7 +78,7 @@ srun -t30:00 -c4 --mem=4000 --gres=gpu:1 --pty /bin/bash
 ```
 Enter singularity and activate the environment.
 ```
-singularity exec --overlay /scratch/$USER/environments/habitat.ext3:ro /scratch/work/public/singularity/cuda11.6.124-cudnn8.4.0.27-devel-ubuntu20.04.4.sif /bin/bash
+singularity exec --nv --bind /usr/share/glvnd/egl_vendor.d/10_nvidia.json --overlay /scratch/$USER/environments/habitat.ext3:ro /scratch/work/public/singularity/cuda11.6.124-cudnn8.4.0.27-devel-ubuntu20.04.4.sif /bin/bash
 source /ext3/env.sh
 conda activate habitat
 ```
@@ -93,3 +93,9 @@ python example.py --save_png --depth_sensor --scene data/scene_datasets/habitat-
 ```
 The agent will traverse a particular path and you should see the performance stats at the very end, something like this:
 `640 x 480, total time 137.86 s, frame time 137.859 ms (7.3 FPS)`. You can find the generated images in the directory `observation`.
+
+### 4. Find the world coordinate
+Now that we've generated RGB images and depth information, we can find the world coordinate for each pixel. There are two approaches we can try
+
+1. You can convert the RGB and depth image to a RGBD image object in Open3D. Then, use Open3D's API to find the world coordinate for each pixel
+2. You can use basic geometry to find the un-projection by using pose and depth information. This should be basic geometry in CV and can be done by numpy.
