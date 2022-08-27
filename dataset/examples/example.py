@@ -11,6 +11,7 @@ import demo_runner as dr
 import math
 import numpy as np
 
+import matplotlib.pyplot as plt
 
 from collections import defaultdict
 
@@ -76,7 +77,7 @@ world_coord = defaultdict(list)
 
 for _i in range(1):
     demo_runner = dr.DemoRunner(settings, dr.DemoRunnerType.EXAMPLE)
-    perf, depth_image, pose= demo_runner.example()
+    perf, depth_image, pose = demo_runner.example()
     perfs.append(perf)
 
     print(" ========================= Performance ======================== ")
@@ -137,8 +138,6 @@ for _i in range(1):
         for item in world_coord_list:
             f.write("%s\n" % item)
     print(" \n ========================= End Obtain World Coord ======================== ")
-
-
 
 if len(perfs) > 1:
     avg_fps = 0
