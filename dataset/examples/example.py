@@ -1,19 +1,26 @@
 #!/usr/bin/env python3
 
 # Copyright (c) Facebook, Inc. and its affiliates.
-# This source code is licensed under the MIT license found in the
+# This source code is licensed under the MIT license found in    the
 # LICENSE file in the root directory of this source tree.
 
 
 import argparse
-
 import demo_runner as dr
+
+import math
+import numpy as np
+
+
+from collections import defaultdict
+
+import PIL
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--scene", type=str, default=dr.default_sim_settings["scene"])
 parser.add_argument("--width", type=int, default=640)
 parser.add_argument("--height", type=int, default=480)
-parser.add_argument("--max_frames", type=int, default=1000)
+parser.add_argument("--max_frames", type=int, default=5)
 parser.add_argument("--save_png", action="store_true")
 parser.add_argument("--sensor_height", type=float, default=1.5)
 parser.add_argument("--disable_color_sensor", action="store_true")
@@ -65,9 +72,11 @@ def make_settings():
 settings = make_settings()
 
 perfs = []
+world_coord = defaultdict(list)
+
 for _i in range(1):
     demo_runner = dr.DemoRunner(settings, dr.DemoRunnerType.EXAMPLE)
-    perf = demo_runner.example()
+    perf, depth_image, pose= demo_runner.example()
     perfs.append(perf)
 
     print(" ========================= Performance ======================== ")
@@ -78,10 +87,59 @@ for _i in range(1):
     )
     print(" ============================================================== ")
 
+
+
+    print(" \n ========================= Obtain World Coord ======================== ")
+
     # assert perf["fps"] > args.test_fps_regression, (
     #    "FPS is below regression threshold: %0.1f < %0.1f"
     #    % (perf["fps"], args.test_fps_regression)
     # )
+
+    # Constants from settings.py
+    HFOV = settings["hfov"]
+    WIDTH = settings["width"]
+    HEIGHT = settings["height"]
+
+    # focal length in pixels
+    FOCAL_LENGTH = WIDTH / (2 * math.tan(HFOV/2))
+
+    # image center cx,cy coord
+    CX = int(WIDTH / 2)
+    CY = int(HEIGHT / 2)
+
+    # convert raw depth_image to depth_image_pixels
+    depth_image_pixels = []
+    for image in depth_image:
+        pixel_array = np.array(image)
+        depth_image_pixels.append(pixel_array)
+
+
+    # index, pixel, image num, are all indexed from 0
+    ROUND_NUMBERS = True
+    world_coord_list = []
+    for index, pixel_depth in np.ndenumerate(depth_image_pixels):
+        image_id, x, y = index[0], index[1], index[2]
+        X_world = (x - CX) * pixel_depth / FOCAL_LENGTH                             
+        Y_world = (y - CY) * pixel_depth / FOCAL_LENGTH
+        Z_world = pixel_depth
+
+        if x == 0 and y == 0:
+            world_coord_list.append(f"image_id: {image_id}")
+            print(f"\rProgress: [{'#'*(image_id)}] {round((image_id)/len(depth_image_pixels), 3)*100}%")
+
+        if ROUND_NUMBERS:
+            X_world, Y_world = round(X_world, 3), round(Y_world, 3)
+
+        world_coord_list.append(f"Pixel [{x},{y}] \n \t {(X_world, Y_world, Z_world)}")
+        
+    with open("world_coord.txt", "w") as f:
+        for item in world_coord_list:
+            f.write("%s\n" % item)
+    print(" \n ========================= End Obtain World Coord ======================== ")
+
+
+
 if len(perfs) > 1:
     avg_fps = 0
     avg_frame_time = 0

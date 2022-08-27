@@ -7,7 +7,7 @@ import habitat_sim.agent
 
 default_sim_settings = {
     # settings shared by example.py and benchmark.py
-    "max_frames": 1000,
+    "max_frames": 10,
     "width": 640,
     "height": 480,
     "default_agent": 0,

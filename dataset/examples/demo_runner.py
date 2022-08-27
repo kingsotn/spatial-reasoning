@@ -36,10 +36,19 @@ class ABTestGroup(Enum):
 
 
 class DemoRunner:
+    # self defined methods
+    def get_position(self):
+        return self._sim.last_state().position
+    def get_depth(self):
+        return self.depth_val
+        
     def __init__(self, sim_settings, simulator_demo_type):
         if simulator_demo_type == DemoRunnerType.EXAMPLE:
             self.set_sim_settings(sim_settings)
         self._demo_type = simulator_demo_type
+        self.depth_val = None
+        self.depth_images = []
+        self.poses = []
 
     def set_sim_settings(self, sim_settings):
         self._sim_settings = sim_settings.copy()
@@ -77,6 +86,8 @@ class DemoRunner:
             os.mkdir("observation/depth")
         depth_obs = obs["depth_sensor"]
         depth_img = Image.fromarray((depth_obs / 10 * 255).astype(np.uint8), mode="L")
+        print("image no.:", total_frames)
+
         if self._demo_type == DemoRunnerType.AB_TEST:
             if self._group_id == ABTestGroup.CONTROL:
                 depth_img.save("observation/depth/test.depth.control.%05d.png" % total_frames)
@@ -84,6 +95,8 @@ class DemoRunner:
                 depth_img.save("observation/depth/test.depth.test.%05d.png" % total_frames)
         else:
             depth_img.save("observation/depth/test.depth.%05d.png" % total_frames)
+            # check if image numbers match
+        return depth_img
 
     def output_semantic_mask_stats(self, obs, total_frames):
         semantic_obs = obs["semantic_sensor"]
@@ -261,7 +274,7 @@ class DemoRunner:
             observations = self._sim.step(action)
             time_per_step.append(time.time() - start_step_time)
 
-            # get simulation step time without sensor observations
+            # get simulation step time without sensor observationsx
             total_sim_step_time += self._sim._previous_step_time
 
             if self._sim_settings["save_png"]:
@@ -270,15 +283,14 @@ class DemoRunner:
                 if self._sim_settings["color_sensor"]:
                     self.save_color_observation(observations, total_frames)
                 if self._sim_settings["depth_sensor"]:
-                    self.save_depth_observation(observations, total_frames)
+                    self.depth_val = self.save_depth_observation(observations, total_frames)
                 if self._sim_settings["semantic_sensor"]:
                     self.save_semantic_observation(observations, total_frames)
 
             state = self._sim.last_state()
 
             if not self._sim_settings["silent"]:
-                print("position\t", state.position, "\t", "rotation\t", state.rotation)
-
+                print("position\t", state.position, "\t", "rotation\t", state.rotation, "depth image for ", self.depth_val)
             if self._sim_settings["compute_shortest_path"]:
                 self.compute_shortest_path(
                     state.position, self._sim_settings["goal_position"]
@@ -305,7 +317,7 @@ class DemoRunner:
         perf["time_per_step"] = time_per_step
         perf["avg_sim_step_time"] = total_sim_step_time / total_frames
 
-        return perf
+        return perf, self.depth_val, self.get_position()
 
     def print_semantic_scene(self):
         if self._sim_settings["print_semantic_scene"]:
@@ -438,8 +450,14 @@ class DemoRunner:
         # print semantic scene
         self.print_semantic_scene()
 
-        perf = self.do_time_steps()
+        # range depends on max-frames
+        for _ in range(5):
+            perf, depth_img, pose = self.do_time_steps()
+            self.poses.append(pose)
+            self.depth_images.append(depth_img)
+
+
         self._sim.close()
         del self._sim
 
-        return perf
+        return perf, self.depth_images, self.poses
